@@ -1,4 +1,4 @@
-const draw = function() {
+const run = function() {
     const input = document.getElementById("input");
 
     const canvas = document.getElementById("canvas");
@@ -7,17 +7,23 @@ const draw = function() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
-    const imageO = new Image();
-    imageO.addEventListener("load", () => {
-        const imageRE = new Image();
+    const imageTop = new Image();
+    imageTop.addEventListener("load", () => {
+        const imageCream = new Image();
 
-        imageRE.addEventListener("load", () => {
-            input.addEventListener("input", onInput(canvas, ctx, imageO, imageRE));
+        imageCream.addEventListener("load", () => {
+            const imageBottom = new Image();
+
+            imageBottom.addEventListener("load", () => {
+                input.addEventListener("input", onInput(canvas, ctx, imageTop, imageCream, imageBottom));
+            });
+            imageBottom.src = "bottom.png";
+
         });
-        imageRE.src = "RE.png";
+        imageCream.src = "cream.png";
 
     });
-    imageO.src = "O.png";
+    imageTop.src = "top.png";
 
     console.log("blep");
 };
@@ -25,52 +31,110 @@ const draw = function() {
 const symbolO = "O";
 const symbolRE = "RE";
 
-const onInput = (canvas, ctx, imageO, imageRE) => ({ target })  => {
+const onInput = (canvas, ctx, imageTop, imageCream, imageBottom) => ({ target })  => {
     const images = {
         [symbolO]: {
-            img: imageO,
-            offset: {
-                y: 5
-            }
+            img: imageTop,
+            // nonSequentialOffset: 5,
+            height: 16
         },
         [symbolRE]: {
-            img: imageRE,
-            offset: {
-                x: 8,
-                y: 7
-            }
+            img: imageCream,
+            xOffset: 8,
+            nonSequentialOffset: 7,
+            height: 7
         }
     };
 
     const string = target.value;
 
-    const { parsed } = string.split("")
+    const { symbols } = string.split("")
         .map(char => char.toUpperCase())
         .filter(char =>
             ["O", "R", "E"].includes(char))
         .reduce((agg, char) => {
             if(char == "O")
-                agg.parsed.push(symbolO);
+                agg.symbols.push(symbolO);
             else if(char == "R")
                 agg.last = "R";
             else if(char == "E") {
                 if(agg.last == "R")
-                    agg.parsed.push(symbolRE);
+                    agg.symbols.push(symbolRE);
             }
 
             agg.last = char;
             return agg;
         }, {
-            parsed: [],
+            symbols: [],
             last: ""
         });
 
-    console.log(parsed);
-
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    parsed.reverse().forEach((symbol, i) => {
-        const { img, offset: { x = 0, y } } = images[symbol];
-
-        ctx.drawImage(img, x, ((parsed.length - (i + 1)) * 7) + y);
-    });
+    console.log(symbols);
+    draw(canvas, ctx, images, symbols);
 };
+
+const getParams = (images, symbols) => {
+    const { params } = symbols.reverse().reduce((agg, symbol, i) => {
+        const { img, height, nonSequentialOffset } = images[symbol];
+
+        // ((symbols.length - (i + 1)) * 7) + y)
+
+        const offset = agg.last && agg.last.symbol != symbol && nonSequentialOffset
+            ? nonSequentialOffset
+            : 0;
+
+        const param = {
+            symbol,
+            offset,
+            height
+        };
+
+        agg.params.push(param)
+        agg.last = param;
+
+        return agg;
+    }, {
+        params: []
+    });
+
+    return params;
+};
+
+const calculateOffsets = params => {
+    const { offsets } = params.reduce((agg, { symbol, offset, height }) => {
+        const currentOffset = agg.last + offset;
+        agg.offsets.push([symbol, currentOffset, { offset, height }]);
+
+        //the next symbol should start above the current
+        agg.last = currentOffset + height;
+        return agg;
+    }, {
+        offsets: [],
+        last: 0
+    });
+
+    return offsets;
+}
+
+const draw = (canvas, ctx, images, symbols) => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const params = getParams(images, symbols);
+    const offsets = calculateOffsets(params);
+
+    const topOffset = offsets[offsets.length - 1];
+    const topImage = images[topOffset[0]];
+
+    const totalHeight = topOffset[1] + (topImage.img.height) + topImage.height;
+
+    console.log(offsets);
+
+    offsets.forEach(([symbol, yOffset]) => {
+        const { img, xOffset = 0 } = images[symbol];
+
+        const yStart = totalHeight - yOffset - img.height;
+
+        ctx.drawImage(img, xOffset, yStart);
+        // ctx.strokeRect(xOffset, yStart, img.width, img.height);
+    });
+
+}
