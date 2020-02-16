@@ -63,14 +63,14 @@ const parseInput = input =>
         .reduce((agg, char) => {
             if(char == "O") {
                 agg.symbols.push(symbolO);
-                agg.count.cookies += 1;
+                agg.counts.cookies += 1;
             }
             else if(char == "R")
                 agg.last = "R";
             else if(char == "E") {
                 if(agg.last == "R") {
                     agg.symbols.push(symbolRE);
-                    agg.count.cream += 1;
+                    agg.counts.cream += 1;
                 }
             }
 
