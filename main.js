@@ -1,4 +1,4 @@
-const run = function() {
+const init = function() {
     const input = document.getElementById("input");
 
     const canvas = document.getElementById("canvas");
