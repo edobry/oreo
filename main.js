@@ -48,29 +48,37 @@ const onInput = (canvas, ctx, imageTop, imageCream, imageBottom) => ({ target })
 
     const string = target.value;
 
-    const { symbols } = string.split("")
+    const { symbols, counts } = string.split("")
         .map(char => char.toUpperCase())
         .filter(char =>
             ["O", "R", "E"].includes(char))
         .reduce((agg, char) => {
-            if(char == "O")
+            if(char == "O") {
                 agg.symbols.push(symbolO);
+                agg.count.cookies += 1;
+            }
             else if(char == "R")
                 agg.last = "R";
             else if(char == "E") {
-                if(agg.last == "R")
+                if(agg.last == "R") {
                     agg.symbols.push(symbolRE);
+                    agg.count.cream += 1;
+                }
             }
 
             agg.last = char;
             return agg;
         }, {
             symbols: [],
+            counts: {
+                cookies: 0,
+                cream: 0
+            },
             last: ""
         });
 
     console.log(symbols);
-    draw(canvas, ctx, images, symbols);
+    draw(canvas, ctx, images, symbols, counts);
 };
 
 const getParams = (images, symbols) => {
@@ -114,10 +122,26 @@ const calculateOffsets = params => {
     });
 
     return offsets;
-}
+};
 
-const draw = (canvas, ctx, images, symbols) => {
+const countOreos = ({ cookies, cream }) => {
+    //since we only get 1 cream per oreo, we need
+    //at least as many oreos as we need cream
+    let oreosRequired = cream;
+
+    //we get 2 cookies per oreo, so we have that many available
+    const availableCookies = oreosRequired * 2;
+    if(cookies > availableCookies) {
+        const cookieDeficit = cookies - availableCookies;
+        oreosRequired += Math.ceil(cookieDeficit / 2);
+    }
+
+    return oreosRequired;
+};
+
+const draw = (canvas, ctx, images, symbols, counts) => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
     const params = getParams(images, symbols);
     const offsets = calculateOffsets(params);
 
@@ -127,6 +151,12 @@ const draw = (canvas, ctx, images, symbols) => {
     const totalHeight = topOffset[1] + (topImage.img.height) + topImage.height;
 
     console.log(offsets);
+
+    const oreosAvailable = countOreos(counts);
+    const cookieAvails = {
+        top: oreosAvailable,
+        bottom: oreosAvailable
+    };
 
     offsets.forEach(([symbol, yOffset]) => {
         const { img, xOffset = 0 } = images[symbol];
