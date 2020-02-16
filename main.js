@@ -30,6 +30,7 @@ const init = function() {
 
 const symbolO = "O";
 const symbolRE = "RE";
+const allowedChars = [...symbolO, ...symbolRE];
 
 const onInput = (canvas, ctx, imageTop, imageCream, imageBottom) => ({ target })  => {
     const images = {
@@ -51,7 +52,7 @@ const onInput = (canvas, ctx, imageTop, imageCream, imageBottom) => ({ target })
     const { symbols, counts } = string.split("")
         .map(char => char.toUpperCase())
         .filter(char =>
-            ["O", "R", "E"].includes(char))
+            allowedChars.includes(char))
         .reduce((agg, char) => {
             if(char == "O") {
                 agg.symbols.push(symbolO);
