@@ -47,9 +47,16 @@ const onInput = (canvas, ctx, imageTop, imageCream, imageBottom) => ({ target })
         }
     };
 
-    const string = target.value;
+    const input = target.value;
 
-    const { symbols, counts } = string.split("")
+    const { symbols, counts } = parseInput(input);
+
+    console.log(symbols);
+    draw(canvas, ctx, images, symbols, counts);
+};
+
+const parseInput = input =>
+    input.split("")
         .map(char => char.toUpperCase())
         .filter(char =>
             allowedChars.includes(char))
@@ -77,10 +84,6 @@ const onInput = (canvas, ctx, imageTop, imageCream, imageBottom) => ({ target })
             },
             last: ""
         });
-
-    console.log(symbols);
-    draw(canvas, ctx, images, symbols, counts);
-};
 
 const getParams = (images, symbols) => {
     const { params } = symbols.reverse().reduce((agg, symbol, i) => {
