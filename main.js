@@ -1,3 +1,5 @@
+var imageTop, imageBottom, imageCream;
+
 const init = function() {
     const input = document.getElementById("input");
 
@@ -7,14 +9,20 @@ const init = function() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
-    const imageTop = new Image();
+    imageTop = new Image();
     imageTop.addEventListener("load", () => {
-        const imageCream = new Image();
+        imageCream = new Image();
 
         imageCream.addEventListener("load", () => {
-            const imageBottom = new Image();
+            imageBottom = new Image();
 
             imageBottom.addEventListener("load", () => {
+                imageNameToAsset = {
+                    top: imageTop,
+                    bottom: imageBottom,
+                    cream: imageCream
+                };
+
                 input.addEventListener("input", onInput(canvas, ctx, imageTop, imageCream, imageBottom));
             });
             imageBottom.src = "bottom.png";
@@ -32,15 +40,17 @@ const symbolO = "O";
 const symbolRE = "RE";
 const allowedChars = [...symbolO, ...symbolRE];
 
+var imageNameToAsset;
+
 const onInput = (canvas, ctx, imageTop, imageCream, imageBottom) => ({ target })  => {
-    const images = {
+    const symbolImages = {
         [symbolO]: {
-            img: imageTop,
+            img: ["top", "bottom"],
             // nonSequentialOffset: 5,
             height: 16
         },
         [symbolRE]: {
-            img: imageCream,
+            img: ["cream"],
             xOffset: 8,
             nonSequentialOffset: 7,
             height: 7
@@ -49,10 +59,10 @@ const onInput = (canvas, ctx, imageTop, imageCream, imageBottom) => ({ target })
 
     const input = target.value;
 
-    const { symbols, counts } = parseInput(input);
+    const { symbols, counts: requiredCounts } = parseInput(input);
 
     console.log(symbols);
-    draw(canvas, ctx, images, symbols, counts);
+    draw(canvas, ctx, symbolImages, symbols.reverse(), requiredCounts);
 };
 
 const parseInput = input =>
@@ -85,9 +95,9 @@ const parseInput = input =>
             last: ""
         });
 
-const getParams = (images, symbols) => {
+const getParams = (symbolImages, symbols) => {
     const { params } = symbols.reverse().reduce((agg, symbol, i) => {
-        const { img, height, nonSequentialOffset } = images[symbol];
+        const { img, height, nonSequentialOffset } = symbolImages[symbol];
 
         // ((symbols.length - (i + 1)) * 7) + y)
 
@@ -143,32 +153,53 @@ const countOreos = ({ cookies, cream }) => {
     return oreosRequired;
 };
 
-const draw = (canvas, ctx, images, symbols, counts) => {
+const draw = (canvas, ctx, symbolImages, symbols, requiredCounts) => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    const params = getParams(images, symbols);
+    const params = getParams(symbolImages, symbols);
     const offsets = calculateOffsets(params);
 
     const topOffset = offsets[offsets.length - 1];
-    const topImage = images[topOffset[0]];
+    const topImage = symbolImages[topOffset[0]];
 
-    const totalHeight = topOffset[1] + (topImage.img.height) + topImage.height;
+    const totalHeight = topOffset[1] + (imageNameToAsset[topImage.img[0]].height) + topImage.height;
 
-    console.log(offsets);
+    // console.log(offsets);
 
-    const oreosAvailable = countOreos(counts);
+    console.log(requiredCounts);
+
+    const oreosAvailable = countOreos(requiredCounts);
     const cookieAvails = {
         top: oreosAvailable,
-        bottom: oreosAvailable
+        bottom: oreosAvailable,
+        cream: oreosAvailable
     };
 
+    console.log(cookieAvails);
+
     offsets.forEach(([symbol, yOffset]) => {
-        const { img, xOffset = 0 } = images[symbol];
+        const { asset, xOffset } = selectImg(symbol, symbolImages, cookieAvails);
 
-        const yStart = totalHeight - yOffset - img.height;
+        const yStart = totalHeight - yOffset - asset.height;
 
-        ctx.drawImage(img, xOffset, yStart);
+        ctx.drawImage(asset, xOffset, yStart);
         // ctx.strokeRect(xOffset, yStart, img.width, img.height);
     });
 
-}
+};
+
+const selectImg = (symbol, symbolImages, avails) => {
+    const { img, xOffset = 0 } = symbolImages[symbol];
+
+    const chosenImage = img[symbol == symbolO
+            ? (avails["top"] < (avails["bottom"]+1)
+            ? 1
+            : 0)
+        : 0];
+
+    const asset = imageNameToAsset[chosenImage]
+
+    avails[chosenImage] -= 1;
+
+    return { asset, xOffset };
+};
